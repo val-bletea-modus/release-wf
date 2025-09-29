@@ -75,14 +75,15 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          version="${{ steps.parse_version.outputs.version }}"
+          current_version="${{ steps.parse_version.outputs.version }}"
           
-          # Get previous release tag
-          previous_tag=$(git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | sort -V | tail -n1)
+          # Get all release tags except current one, sorted, and get the most recent
+          previous_tag=$(git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | grep -v "^${current_version}$" | sort -V | tail -n1)
           
           if [ -z "$previous_tag" ]; then
             echo "changelog=- Initial release" >> $GITHUB_OUTPUT
           else
+            echo "Comparing $previous_tag to HEAD"
             # Get all commits between previous release and current HEAD
             if commits=$(git log --oneline "$previous_tag"..HEAD --no-merges --pretty=format:"- %s"); then
               if [ -n "$commits" ]; then
