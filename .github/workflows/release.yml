@@ -77,15 +77,24 @@ jobs:
         run: |
           current_version="${{ steps.parse_version.outputs.version }}"
           
+          echo "Current version: $current_version"
+          echo "All tags:"
+          git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | sort -V
+          
           # Get all release tags except current one, sorted, and get the most recent
           previous_tag=$(git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | grep -v "^${current_version}$" | sort -V | tail -n1)
           
+          echo "Previous tag found: $previous_tag"
+          
           if [ -z "$previous_tag" ]; then
+            echo "No previous tag found - this is initial release"
             echo "changelog=- Initial release" >> $GITHUB_OUTPUT
           else
             echo "Comparing $previous_tag to HEAD"
             # Get all commits between previous release and current HEAD
             if commits=$(git log --oneline "$previous_tag"..HEAD --no-merges --pretty=format:"- %s"); then
+              echo "Commits found:"
+              echo "$commits"
               if [ -n "$commits" ]; then
                 {
                   echo 'changelog<<EOF'
@@ -93,9 +102,11 @@ jobs:
                   echo EOF
                 } >> $GITHUB_OUTPUT
               else
+                echo "No commits between $previous_tag and HEAD"
                 echo "changelog=- No new commits since $previous_tag" >> $GITHUB_OUTPUT
               fi
             else
+              echo "Failed to get commit log"
               echo "changelog=- Unable to generate changelog" >> $GITHUB_OUTPUT
             fi
           fi
