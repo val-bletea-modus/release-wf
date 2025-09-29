@@ -33,6 +33,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: |
+          git fetch --tags --force
+          git fetch origin '+refs/tags/*:refs/tags/*'
+          echo "=== All tags in repository ==="
+          git tag -l
+          echo ""
+          echo "=== Tags matching xxx.0[1-4] pattern ==="
+          git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | sort -V || echo "No matching tags found"
 
       - name: Parse version from branch name
         id: parse_version
@@ -40,17 +52,14 @@ jobs:
           branch_name="${{ github.ref_name }}"
           echo "Current branch: $branch_name"
           
-          # Check if we're on a release branch
           if [[ ! "$branch_name" =~ ^release/[0-9]{3}\.[0-9]{2}$ ]]; then
             echo "Error: Must run on release branch with format release/xxx.xx"
             echo "Current branch: $branch_name"
             exit 1
           fi
           
-          # Extract version from branch name
           version=$(echo "$branch_name" | sed 's/release\///')
           
-          # Validate version format (xxx.0[1-4])
           if [[ ! "$version" =~ ^[0-9]{3}\.0[1-4]$ ]]; then
             echo "Error: Version must be xxx.0[1-4] format"
             echo "Found: $version"
@@ -77,25 +86,27 @@ jobs:
         run: |
           current_version="${{ steps.parse_version.outputs.version }}"
           
+          echo "=== Changelog Generation Debug ==="
           echo "Current version: $current_version"
-          echo "All tags:"
+          echo ""
+          echo "All release tags:"
           git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | sort -V
+          echo ""
           
-          # Get all release tags except current one, sorted, and get the most recent
           previous_tag=$(git tag -l | grep -E "^[0-9]{3}\.0[1-4]$" | grep -v "^${current_version}$" | sort -V | tail -n1)
           
-          echo "Previous tag found: $previous_tag"
+          echo "Previous tag found: '$previous_tag'"
+          echo ""
           
           if [ -z "$previous_tag" ]; then
-            echo "No previous tag found - this is initial release"
+            echo "No previous tag - this is initial release"
             echo "changelog=- Initial release" >> $GITHUB_OUTPUT
           else
-            echo "Comparing $previous_tag to HEAD"
-            # Get all commits between previous release and current HEAD
+            echo "Getting commits between $previous_tag and HEAD"
             if commits=$(git log --oneline "$previous_tag"..HEAD --no-merges --pretty=format:"- %s"); then
-              echo "Commits found:"
-              echo "$commits"
               if [ -n "$commits" ]; then
+                echo "Commits found:"
+                echo "$commits"
                 {
                   echo 'changelog<<EOF'
                   echo "$commits"
