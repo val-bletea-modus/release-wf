@@ -32,7 +32,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -135,16 +135,3 @@ jobs:
           body: ${{ steps.release_notes.outputs.notes }}
           draft: false
           prerelease: false
-
-      - name: Output summary
-        run: |
-          version="${{ steps.parse_version.outputs.version }}"
-          release_url="${{ steps.create_release.outputs.html_url }}"
-          branch_name="${{ github.ref_name }}"
-          
-          echo "## Release Created" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** $version" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** $branch_name" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag:** $version" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release:** [View Release]($release_url)" >> $GITHUB_STEP_SUMMARY
